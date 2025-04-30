@@ -8,8 +8,6 @@ import { format } from 'date-fns';
 export function PayrollCalendar() {
   // Get current date
   const today = new Date();
-  const month = today.getMonth();
-  const year = today.getFullYear();
   
   // Generate payday dates for highlighting in calendar
   const paydays = paydaySchedule.map(schedule => schedule.date);
@@ -32,8 +30,7 @@ export function PayrollCalendar() {
         <Calendar
           mode="single"
           selected={today}
-          month={month}
-          year={year}
+          defaultMonth={today} // Use defaultMonth with Date object instead of separate month and year
           className="rounded-md border"
           modifiers={{
             payday: (date) => isDayHighlighted(date),
