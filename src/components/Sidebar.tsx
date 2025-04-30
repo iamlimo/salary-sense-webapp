@@ -1,99 +1,57 @@
 
-import React, { useState } from 'react';
-import { 
-  Calendar, 
-  Users, 
-  BarChart, 
-  DollarSign, 
-  FileText, 
-  Settings,
-  Menu,
-  X
-} from 'lucide-react';
-import { cn } from '@/lib/utils';
-
-type SidebarItemProps = {
-  icon: React.ElementType;
-  label: string;
-  active?: boolean;
-  onClick?: () => void;
-};
-
-const SidebarItem = ({ icon: Icon, label, active, onClick }: SidebarItemProps) => {
-  return (
-    <button
-      onClick={onClick}
-      className={cn(
-        'flex items-center gap-3 px-3 py-3 rounded-lg w-full transition-colors',
-        active 
-          ? 'bg-payroll-100 text-payroll-700' 
-          : 'text-gray-600 hover:bg-gray-100'
-      )}
-    >
-      <Icon size={18} />
-      <span className="text-sm font-medium">{label}</span>
-    </button>
-  );
-};
+import React from 'react';
+import { Link, useLocation } from 'react-router-dom';
+import { LayoutDashboard, Users, CreditCard, CalendarDays, Calculator } from 'lucide-react';
 
 export function Sidebar() {
-  const [activeItem, setActiveItem] = useState('Dashboard');
-  const [collapsed, setCollapsed] = useState(false);
+  const location = useLocation();
   
-  const items = [
-    { icon: BarChart, label: 'Dashboard' },
-    { icon: Users, label: 'Employees' },
-    { icon: DollarSign, label: 'Payroll' },
-    { icon: Calendar, label: 'Schedule' },
-    { icon: FileText, label: 'Reports' },
-    { icon: Settings, label: 'Settings' }
+  const isActive = (path: string) => {
+    return location.pathname === path;
+  };
+  
+  const menuItems = [
+    { icon: LayoutDashboard, label: 'Dashboard', path: '/' },
+    { icon: Users, label: 'Employees', path: '/employees' },
+    { icon: CreditCard, label: 'Payroll', path: '/payroll' },
+    { icon: Calculator, label: 'Calculator', path: '/calculator' },
+    { icon: CalendarDays, label: 'Calendar', path: '/calendar' },
   ];
 
   return (
-    <div className={cn(
-      'border-r border-gray-200 bg-white h-screen flex flex-col transition-all duration-300',
-      collapsed ? 'w-16' : 'w-64'
-    )}>
-      {/* Header */}
-      <div className="p-4 border-b border-gray-200 flex items-center justify-between">
-        {!collapsed && (
-          <div className="text-xl font-bold text-payroll-700">SalarySense</div>
-        )}
-        <button 
-          onClick={() => setCollapsed(!collapsed)} 
-          className="p-1 rounded-md hover:bg-gray-100"
-        >
-          {collapsed ? <Menu size={20} /> : <X size={20} />}
-        </button>
+    <div className="hidden md:flex flex-col w-64 bg-white border-r border-gray-200 h-full">
+      <div className="flex items-center justify-center h-16 border-b border-gray-200">
+        <h1 className="text-xl font-bold text-payroll-700">PayrollPro</h1>
       </div>
       
-      {/* Navigation Items */}
-      <div className="flex-1 overflow-y-auto p-3 space-y-1">
-        {items.map((item) => (
-          <SidebarItem
-            key={item.label}
-            icon={item.icon}
-            label={collapsed ? '' : item.label}
-            active={activeItem === item.label}
-            onClick={() => setActiveItem(item.label)}
-          />
+      <nav className="flex-1 p-4 space-y-1">
+        {menuItems.map((item) => (
+          <Link
+            key={item.path}
+            to={item.path}
+            className={`flex items-center px-4 py-3 text-sm rounded-md transition-colors ${
+              isActive(item.path)
+                ? 'bg-payroll-100 text-payroll-700 font-medium'
+                : 'text-gray-600 hover:bg-gray-100'
+            }`}
+          >
+            <item.icon className="h-5 w-5 mr-3" />
+            {item.label}
+          </Link>
         ))}
-      </div>
+      </nav>
       
-      {/* Footer */}
-      {!collapsed && (
-        <div className="p-4 border-t border-gray-200">
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 bg-payroll-100 rounded-full flex items-center justify-center">
-              <span className="text-xs font-medium text-payroll-700">JS</span>
-            </div>
-            <div>
-              <div className="text-sm font-medium">Admin User</div>
-              <div className="text-xs text-gray-500">admin@company.com</div>
-            </div>
+      <div className="p-4 border-t border-gray-200">
+        <div className="flex items-center">
+          <div className="h-8 w-8 rounded-full bg-payroll-200 flex items-center justify-center">
+            <span className="text-sm font-medium text-payroll-700">AD</span>
+          </div>
+          <div className="ml-3">
+            <p className="text-sm font-medium">Admin User</p>
+            <p className="text-xs text-gray-500">admin@company.com</p>
           </div>
         </div>
-      )}
+      </div>
     </div>
   );
 }
