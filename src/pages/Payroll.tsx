@@ -1,8 +1,80 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { DashboardLayout } from '@/layouts/DashboardLayout';
+import { Button } from '@/components/ui/button';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { FileCsv, FileExcel, FilePdf, Download } from 'lucide-react';
+import { toast } from '@/components/ui/sonner';
+import { exportPayrollToExcel, exportPayrollToCsv, exportPayrollToPdf } from '@/utils/exportUtils';
 
 const Payroll = () => {
+  const [selectedPayroll, setSelectedPayroll] = useState<number | null>(null);
+  
+  // Mock payroll data
+  const payrollData = [
+    {
+      id: 1,
+      period: 'Mar 16-31, 2025',
+      status: 'Paid',
+      total: 24500.00,
+      details: [
+        { name: 'Employee A', baseSalary: 10000, taxes: 2000, net: 8000 },
+        { name: 'Employee B', baseSalary: 12000, taxes: 2400, net: 9600 },
+        { name: 'Employee C', baseSalary: 8000, taxes: 1600, net: 6400 },
+      ]
+    },
+    {
+      id: 2,
+      period: 'Mar 1-15, 2025',
+      status: 'Paid',
+      total: 24350.00,
+      details: [
+        { name: 'Employee A', baseSalary: 10000, taxes: 2000, net: 8000 },
+        { name: 'Employee B', baseSalary: 12000, taxes: 2400, net: 9600 },
+        { name: 'Employee C', baseSalary: 7500, taxes: 1500, net: 6000 },
+      ]
+    },
+    {
+      id: 3,
+      period: 'Feb 16-28, 2025',
+      status: 'Paid',
+      total: 23900.00,
+      details: [
+        { name: 'Employee A', baseSalary: 9800, taxes: 1960, net: 7840 },
+        { name: 'Employee B', baseSalary: 12000, taxes: 2400, net: 9600 },
+        { name: 'Employee C', baseSalary: 8200, taxes: 1640, net: 6560 },
+      ]
+    },
+  ];
+  
+  const handleExport = (format: 'excel' | 'csv' | 'pdf', payrollId: number) => {
+    const payroll = payrollData.find(p => p.id === payrollId);
+    if (!payroll) return;
+    
+    try {
+      switch(format) {
+        case 'excel':
+          exportPayrollToExcel(payroll);
+          break;
+        case 'csv':
+          exportPayrollToCsv(payroll);
+          break;
+        case 'pdf':
+          exportPayrollToPdf(payroll);
+          break;
+      }
+      toast.success(`Payroll exported successfully as ${format.toUpperCase()}`);
+    } catch (error) {
+      console.error("Export error:", error);
+      toast.error(`Failed to export payroll as ${format.toUpperCase()}`);
+    }
+  };
+  
+  const viewPayrollDetails = (payrollId: number) => {
+    setSelectedPayroll(payrollId === selectedPayroll ? null : payrollId);
+  };
+  
   return (
     <DashboardLayout>
       <div className="p-6">
@@ -30,48 +102,92 @@ const Payroll = () => {
           <div className="border-t pt-6">
             <h2 className="text-lg font-medium mb-4">Recent Payrolls</h2>
             <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead className="bg-gray-50 text-gray-700">
-                  <tr>
-                    <th className="py-3 px-4 text-left">Period</th>
-                    <th className="py-3 px-4 text-left">Status</th>
-                    <th className="py-3 px-4 text-left">Total</th>
-                    <th className="py-3 px-4 text-left">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-100">
-                  <tr>
-                    <td className="py-3 px-4">Mar 16-31, 2025</td>
-                    <td className="py-3 px-4">
-                      <span className="px-2 py-1 bg-green-100 text-green-800 rounded-full text-xs">Paid</span>
-                    </td>
-                    <td className="py-3 px-4">$24,500.00</td>
-                    <td className="py-3 px-4">
-                      <button className="text-blue-600 hover:text-blue-800">View</button>
-                    </td>
-                  </tr>
-                  <tr>
-                    <td className="py-3 px-4">Mar 1-15, 2025</td>
-                    <td className="py-3 px-4">
-                      <span className="px-2 py-1 bg-green-100 text-green-800 rounded-full text-xs">Paid</span>
-                    </td>
-                    <td className="py-3 px-4">$24,350.00</td>
-                    <td className="py-3 px-4">
-                      <button className="text-blue-600 hover:text-blue-800">View</button>
-                    </td>
-                  </tr>
-                  <tr>
-                    <td className="py-3 px-4">Feb 16-28, 2025</td>
-                    <td className="py-3 px-4">
-                      <span className="px-2 py-1 bg-green-100 text-green-800 rounded-full text-xs">Paid</span>
-                    </td>
-                    <td className="py-3 px-4">$23,900.00</td>
-                    <td className="py-3 px-4">
-                      <button className="text-blue-600 hover:text-blue-800">View</button>
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Period</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Total</TableHead>
+                    <TableHead>Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {payrollData.map((payroll) => (
+                    <React.Fragment key={payroll.id}>
+                      <TableRow>
+                        <TableCell>{payroll.period}</TableCell>
+                        <TableCell>
+                          <span className="px-2 py-1 bg-green-100 text-green-800 rounded-full text-xs">
+                            {payroll.status}
+                          </span>
+                        </TableCell>
+                        <TableCell>${payroll.total.toLocaleString()}</TableCell>
+                        <TableCell className="flex space-x-2">
+                          <Button 
+                            variant="ghost" 
+                            size="sm"
+                            onClick={() => viewPayrollDetails(payroll.id)}
+                          >
+                            {selectedPayroll === payroll.id ? 'Hide' : 'View'}
+                          </Button>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="outline" size="sm">
+                                <Download className="h-4 w-4 mr-1" />
+                                Export
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuItem onClick={() => handleExport('excel', payroll.id)}>
+                                <FileExcel className="h-4 w-4 mr-2" />
+                                Excel (.xlsx)
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => handleExport('csv', payroll.id)}>
+                                <FileCsv className="h-4 w-4 mr-2" />
+                                CSV (.csv)
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => handleExport('pdf', payroll.id)}>
+                                <FilePdf className="h-4 w-4 mr-2" />
+                                PDF (.pdf)
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </TableCell>
+                      </TableRow>
+                      
+                      {selectedPayroll === payroll.id && (
+                        <TableRow>
+                          <TableCell colSpan={4} className="bg-gray-50 p-0">
+                            <div className="p-4">
+                              <h3 className="font-medium mb-2">Payroll Details</h3>
+                              <Table>
+                                <TableHeader>
+                                  <TableRow>
+                                    <TableHead>Employee</TableHead>
+                                    <TableHead>Base Salary</TableHead>
+                                    <TableHead>Taxes</TableHead>
+                                    <TableHead>Net Pay</TableHead>
+                                  </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                  {payroll.details.map((detail, index) => (
+                                    <TableRow key={index}>
+                                      <TableCell>{detail.name}</TableCell>
+                                      <TableCell>${detail.baseSalary.toLocaleString()}</TableCell>
+                                      <TableCell>${detail.taxes.toLocaleString()}</TableCell>
+                                      <TableCell>${detail.net.toLocaleString()}</TableCell>
+                                    </TableRow>
+                                  ))}
+                                </TableBody>
+                              </Table>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      )}
+                    </React.Fragment>
+                  ))}
+                </TableBody>
+              </Table>
             </div>
           </div>
         </div>
