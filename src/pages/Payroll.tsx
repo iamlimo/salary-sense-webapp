@@ -4,7 +4,7 @@ import { DashboardLayout } from '@/layouts/DashboardLayout';
 import { Button } from '@/components/ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { FileCsv, FileExcel, FilePdf, Download } from 'lucide-react';
+import { FileText, Download, Files } from 'lucide-react';
 import { toast } from '@/components/ui/sonner';
 import { exportPayrollToExcel, exportPayrollToCsv, exportPayrollToPdf } from '@/utils/exportUtils';
 
@@ -139,15 +139,15 @@ const Payroll = () => {
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end">
                               <DropdownMenuItem onClick={() => handleExport('excel', payroll.id)}>
-                                <FileExcel className="h-4 w-4 mr-2" />
+                                <FileText className="h-4 w-4 mr-2" />
                                 Excel (.xlsx)
                               </DropdownMenuItem>
                               <DropdownMenuItem onClick={() => handleExport('csv', payroll.id)}>
-                                <FileCsv className="h-4 w-4 mr-2" />
+                                <Files className="h-4 w-4 mr-2" />
                                 CSV (.csv)
                               </DropdownMenuItem>
                               <DropdownMenuItem onClick={() => handleExport('pdf', payroll.id)}>
-                                <FilePdf className="h-4 w-4 mr-2" />
+                                <FileText className="h-4 w-4 mr-2" />
                                 PDF (.pdf)
                               </DropdownMenuItem>
                             </DropdownMenuContent>
