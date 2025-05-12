@@ -9,7 +9,83 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
-      [_ in never]: never
+      payroll_entries: {
+        Row: {
+          additional_details: Json | null
+          base_salary: number
+          created_at: string
+          employee_name: string
+          id: string
+          net_pay: number
+          payroll_period_id: string
+          taxes: number
+          updated_at: string
+        }
+        Insert: {
+          additional_details?: Json | null
+          base_salary?: number
+          created_at?: string
+          employee_name: string
+          id?: string
+          net_pay?: number
+          payroll_period_id: string
+          taxes?: number
+          updated_at?: string
+        }
+        Update: {
+          additional_details?: Json | null
+          base_salary?: number
+          created_at?: string
+          employee_name?: string
+          id?: string
+          net_pay?: number
+          payroll_period_id?: string
+          taxes?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payroll_entries_payroll_period_id_fkey"
+            columns: ["payroll_period_id"]
+            isOneToOne: false
+            referencedRelation: "payroll_periods"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      payroll_periods: {
+        Row: {
+          created_at: string
+          end_date: string
+          id: string
+          payment_date: string
+          start_date: string
+          status: string
+          total_amount: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          end_date: string
+          id?: string
+          payment_date: string
+          start_date: string
+          status?: string
+          total_amount?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          end_date?: string
+          id?: string
+          payment_date?: string
+          start_date?: string
+          status?: string
+          total_amount?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never

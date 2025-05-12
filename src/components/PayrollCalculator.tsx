@@ -1,7 +1,7 @@
 
 import React, { useState } from 'react';
 import { useForm } from 'react-hook-form';
-import { PlusCircle, Trash2 } from 'lucide-react';
+import { PlusCircle, Trash2, Save } from 'lucide-react';
 import { toast } from '@/components/ui/sonner';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -10,6 +10,7 @@ import { Label } from '@/components/ui/label';
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Separator } from '@/components/ui/separator';
 import { useCustomFields, CustomField } from '@/contexts/CustomFieldsContext';
+import { savePayroll } from '@/services/payrollService';
 
 type FieldValues = {
   baseSalary: number;
@@ -17,21 +18,40 @@ type FieldValues = {
   hourlyRate?: number;
   taxRate: number;
   bonusAmount?: number;
+  employeeName: string;
+  startDate: string;
+  endDate: string;
+  paymentDate: string;
   [key: string]: string | number | undefined;
+};
+
+type CalculatedPayroll = {
+  grossSalary: number;
+  deductions: number;
+  netSalary: number;
+  details: Record<string, number>;
 };
 
 export function PayrollCalculator() {
   const { customFields, addCustomField, removeCustomField } = useCustomFields();
-  const [calculatedPayroll, setCalculatedPayroll] = useState<{
-    grossSalary: number;
-    deductions: number;
-    netSalary: number;
-    details: Record<string, number>;
-  } | null>(null);
+  const [calculatedPayroll, setCalculatedPayroll] = useState<CalculatedPayroll | null>(null);
   
   const [newFieldName, setNewFieldName] = useState('');
   const [newFieldType, setNewFieldType] = useState<'number' | 'text' | 'percentage'>('number');
   const [newFieldDefault, setNewFieldDefault] = useState('');
+  
+  // Get current date in YYYY-MM-DD format for default form values
+  const today = new Date();
+  const formatDate = (date: Date) => {
+    return date.toISOString().split('T')[0];
+  };
+  
+  // Default start date (today), end date (today + 14 days), payment date (end date + 5 days)
+  const defaultEndDate = new Date(today);
+  defaultEndDate.setDate(today.getDate() + 14);
+  
+  const defaultPaymentDate = new Date(defaultEndDate);
+  defaultPaymentDate.setDate(defaultEndDate.getDate() + 5);
   
   const form = useForm<FieldValues>({
     defaultValues: {
@@ -40,6 +60,10 @@ export function PayrollCalculator() {
       hourlyRate: 0,
       taxRate: 20,
       bonusAmount: 0,
+      employeeName: '',
+      startDate: formatDate(today),
+      endDate: formatDate(defaultEndDate),
+      paymentDate: formatDate(defaultPaymentDate),
     },
   });
 
@@ -77,12 +101,14 @@ export function PayrollCalculator() {
     const deductions = (grossSalary * taxRate) / 100;
     const netSalary = grossSalary - deductions;
     
-    setCalculatedPayroll({
+    const calculatedResult = {
       grossSalary,
       deductions,
       netSalary,
       details
-    });
+    };
+    
+    setCalculatedPayroll(calculatedResult);
     
     toast.success("Payroll calculated successfully!");
   };
@@ -120,6 +146,51 @@ export function PayrollCalculator() {
       currency: 'USD',
       maximumFractionDigits: 0
     }).format(value);
+  };
+  
+  const saveCalculatedPayroll = async () => {
+    if (!calculatedPayroll) {
+      toast.error("You need to calculate a payroll first");
+      return;
+    }
+    
+    const values = form.getValues();
+    
+    try {
+      // Create payroll period
+      const period = {
+        start_date: values.startDate,
+        end_date: values.endDate,
+        payment_date: values.paymentDate,
+        status: 'draft',
+        total_amount: calculatedPayroll.grossSalary
+      };
+      
+      // Create payroll entry
+      const entry = {
+        employee_name: values.employeeName,
+        base_salary: Number(values.baseSalary),
+        taxes: calculatedPayroll.deductions,
+        net_pay: calculatedPayroll.netSalary,
+        additional_details: calculatedPayroll.details
+      };
+      
+      await savePayroll(period, [entry]);
+      
+      toast.success("Payroll saved to database");
+      
+      // Reset form after saving
+      form.reset({
+        ...form.getValues(),
+        employeeName: '',
+      });
+      
+      setCalculatedPayroll(null);
+      
+    } catch (error) {
+      console.error("Error saving payroll:", error);
+      toast.error("Failed to save payroll");
+    }
   };
 
   return (
@@ -210,6 +281,23 @@ export function PayrollCalculator() {
           <Form {...form}>
             <form onSubmit={form.handleSubmit(calculatePayroll)} className="space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <FormField
+                  control={form.control}
+                  name="employeeName"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Employee Name</FormLabel>
+                      <FormControl>
+                        <Input 
+                          placeholder="Enter employee name" 
+                          {...field} 
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                
                 <FormField
                   control={form.control}
                   name="baseSalary"
@@ -309,6 +397,59 @@ export function PayrollCalculator() {
                 />
               </div>
               
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <FormField
+                  control={form.control}
+                  name="startDate"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Start Date</FormLabel>
+                      <FormControl>
+                        <Input 
+                          type="date"
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                
+                <FormField
+                  control={form.control}
+                  name="endDate"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>End Date</FormLabel>
+                      <FormControl>
+                        <Input 
+                          type="date"
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                
+                <FormField
+                  control={form.control}
+                  name="paymentDate"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Payment Date</FormLabel>
+                      <FormControl>
+                        <Input 
+                          type="date"
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+              
               {customFields.length > 0 && (
                 <>
                   <Separator className="my-4" />
@@ -384,12 +525,18 @@ export function PayrollCalculator() {
               )}
             </div>
           </CardContent>
-          <CardFooter className="flex justify-end">
+          <CardFooter className="flex justify-end gap-2">
             <Button 
               variant="outline" 
               onClick={() => setCalculatedPayroll(null)}
             >
               Reset
+            </Button>
+            <Button 
+              onClick={saveCalculatedPayroll}
+            >
+              <Save className="h-4 w-4 mr-2" />
+              Save Payroll
             </Button>
           </CardFooter>
         </Card>
