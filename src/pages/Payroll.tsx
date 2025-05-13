@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { DashboardLayout } from "@/layouts/DashboardLayout";
 import { Button } from "@/components/ui/button";
@@ -22,6 +21,7 @@ import {
   exportPayrollToExcel,
   exportPayrollToCsv,
   exportPayrollToPdf,
+  type Payroll as ExportPayroll
 } from "@/utils/exportUtils";
 import {
   fetchPayrollPeriods,
@@ -95,7 +95,7 @@ const Payroll = () => {
 
   const performExport = (format: "excel" | "csv" | "pdf", payrollData: PayrollWithEntries) => {
     try {
-      const exportData = {
+      const exportData: ExportPayroll = {
         id: payrollData.id,
         period: formatPayrollPeriod(payrollData.start_date, payrollData.end_date),
         status: payrollData.status,

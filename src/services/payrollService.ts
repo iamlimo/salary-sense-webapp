@@ -1,5 +1,6 @@
 
 import { supabase } from "@/integrations/supabase/client";
+import { Json } from "@/integrations/supabase/types";
 
 export type PayrollPeriod = {
   id: string;
@@ -42,7 +43,11 @@ export const fetchPayrollPeriods = async (): Promise<PayrollPeriod[]> => {
     throw error;
   }
 
-  return data || [];
+  // Cast the data to ensure it matches our expected types
+  return (data || []).map(period => ({
+    ...period,
+    status: period.status as 'draft' | 'processing' | 'paid' | 'cancelled'
+  }));
 };
 
 /**
@@ -72,17 +77,26 @@ export const fetchPayrollWithEntries = async (payrollId: string): Promise<Payrol
     throw entriesError;
   }
 
+  // Cast the data to ensure it matches our expected types
+  const typedEntries: PayrollEntry[] = (entriesData || []).map(entry => ({
+    ...entry,
+    additional_details: entry.additional_details as Record<string, any> | null
+  }));
+
   return {
-    ...periodData,
-    entries: entriesData || [],
+    ...(periodData as PayrollPeriod),
+    status: periodData.status as 'draft' | 'processing' | 'paid' | 'cancelled',
+    entries: typedEntries
   };
 };
 
 /**
  * Saves a new payroll period and its entries
  */
-export const savePayroll = async (payroll: Omit<PayrollPeriod, 'id' | 'created_at' | 'updated_at'>, 
-                                entries: Omit<PayrollEntry, 'id' | 'created_at' | 'updated_at' | 'payroll_period_id'>[]) => {
+export const savePayroll = async (
+  payroll: Omit<PayrollPeriod, 'id' | 'created_at' | 'updated_at'>, 
+  entries: Omit<PayrollEntry, 'id' | 'created_at' | 'updated_at' | 'payroll_period_id'>[]
+) => {
   // Start a transaction
   const { data: periodData, error: periodError } = await supabase
     .from('payroll_periods')

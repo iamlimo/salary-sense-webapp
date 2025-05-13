@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { PlusCircle, Trash2, Save } from 'lucide-react';
@@ -157,12 +156,12 @@ export function PayrollCalculator() {
     const values = form.getValues();
     
     try {
-      // Create payroll period
+      // Create payroll period with explicit status type
       const period = {
         start_date: values.startDate,
         end_date: values.endDate,
         payment_date: values.paymentDate,
-        status: 'draft',
+        status: 'draft' as 'draft' | 'processing' | 'paid' | 'cancelled', // Fixed status type
         total_amount: calculatedPayroll.grossSalary
       };
       

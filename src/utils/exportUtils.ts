@@ -1,3 +1,4 @@
+
 import * as XLSX from 'xlsx';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
@@ -9,8 +10,9 @@ type PayrollDetail = {
   net: number;
 };
 
-type Payroll = {
-  id: number;
+// Update Payroll type to use string for id
+export type Payroll = {
+  id: string; // Changed from number to string to match UUID format from database
   period: string;
   status: string;
   total: number;
