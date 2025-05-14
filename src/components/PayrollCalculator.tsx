@@ -18,8 +18,6 @@ type FieldValues = {
   taxRate: number;
   bonusAmount?: number;
   employeeName: string;
-  startDate: string;
-  endDate: string;
   paymentDate: string;
   [key: string]: string | number | undefined;
 };
@@ -45,12 +43,9 @@ export function PayrollCalculator() {
     return date.toISOString().split('T')[0];
   };
   
-  // Default start date (today), end date (today + 14 days), payment date (end date + 5 days)
-  const defaultEndDate = new Date(today);
-  defaultEndDate.setDate(today.getDate() + 14);
-  
-  const defaultPaymentDate = new Date(defaultEndDate);
-  defaultPaymentDate.setDate(defaultEndDate.getDate() + 5);
+  // Default payment date (today + 14 days)
+  const defaultPaymentDate = new Date(today);
+  defaultPaymentDate.setDate(today.getDate() + 14);
   
   const form = useForm<FieldValues>({
     defaultValues: {
@@ -60,8 +55,6 @@ export function PayrollCalculator() {
       taxRate: 20,
       bonusAmount: 0,
       employeeName: '',
-      startDate: formatDate(today),
-      endDate: formatDate(defaultEndDate),
       paymentDate: formatDate(defaultPaymentDate),
     },
   });
@@ -156,10 +149,13 @@ export function PayrollCalculator() {
     const values = form.getValues();
     
     try {
+      // Create current date for start_date and end_date
+      const currentDate = formatDate(new Date());
+      
       // Create payroll period with explicit status type
       const period = {
-        start_date: values.startDate,
-        end_date: values.endDate,
+        start_date: currentDate, // Use current date as start date
+        end_date: currentDate,   // Use current date as end date
         payment_date: values.paymentDate,
         status: 'draft' as 'draft' | 'processing' | 'paid' | 'cancelled', // Fixed status type
         total_amount: calculatedPayroll.grossSalary
@@ -388,42 +384,6 @@ export function PayrollCalculator() {
                           placeholder="0.00" 
                           {...field} 
                           onChange={(e) => field.onChange(e.target.valueAsNumber)}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
-              
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <FormField
-                  control={form.control}
-                  name="startDate"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Start Date</FormLabel>
-                      <FormControl>
-                        <Input 
-                          type="date"
-                          {...field}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                
-                <FormField
-                  control={form.control}
-                  name="endDate"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>End Date</FormLabel>
-                      <FormControl>
-                        <Input 
-                          type="date"
-                          {...field}
                         />
                       </FormControl>
                       <FormMessage />
