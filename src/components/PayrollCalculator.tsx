@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { PlusCircle, Trash2, Save } from 'lucide-react';
@@ -133,9 +134,9 @@ export function PayrollCalculator() {
   };
 
   const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat('en-US', {
+    return new Intl.NumberFormat('en-NG', {
       style: 'currency',
-      currency: 'USD',
+      currency: 'NGN',
       maximumFractionDigits: 0
     }).format(value);
   };
