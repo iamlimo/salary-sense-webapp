@@ -20,7 +20,7 @@ export function Sidebar() {
     { icon: Users, label: "Employees", path: "/employees" },
     { icon: CreditCard, label: "Payroll", path: "/payroll" },
     { icon: Calculator, label: "Calculator", path: "/calculator" },
-    { icon: CalendarDays, label: "Pension Link™", path: "/calendar" },
+    { icon: CalendarDays, label: "Pension Link™", path: "/pension" },
   ];
 
   return (
