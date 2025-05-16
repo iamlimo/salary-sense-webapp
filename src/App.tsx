@@ -1,5 +1,4 @@
-
-import React from 'react';
+import React from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -10,6 +9,7 @@ import Calculator from "./pages/Calculator";
 import Payroll from "./pages/Payroll";
 import NotFound from "./pages/NotFound";
 import EmployeesSoon from "./pages/EmployeesSoon";
+import Pension from "./pages/Pension";
 
 const queryClient = new QueryClient();
 
@@ -23,6 +23,7 @@ const App = () => (
             <Route path="/calculator" element={<Calculator />} />
             <Route path="/payroll" element={<Payroll />} />
             <Route path="/employees" element={<EmployeesSoon />} />
+            <Route path="/pension" element={<Pension />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
