@@ -1,6 +1,7 @@
+
 import React, { useState } from 'react';
 import { useForm } from 'react-hook-form';
-import { PlusCircle, Trash2, Save, Calculator } from 'lucide-react';
+import { PlusCircle, Trash2, Save, Calculator, Download } from 'lucide-react';
 import { toast } from '@/components/ui/sonner';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -12,29 +13,30 @@ import { useCustomFields } from '@/contexts/CustomFieldsContext';
 import { savePayroll } from '@/services/payrollService';
 import { ExcelUploader } from './ExcelUploader';
 import { ExcelPayrollData } from '@/utils/excelUtils';
+import { calculateNigerianPayroll, NigerianPayrollOutput } from '@/utils/nigerianPayrollCalculator';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 type FieldValues = {
-  baseSalary: number;
-  hoursWorked?: number;
-  hourlyRate?: number;
-  taxRate: number;
-  bonusAmount?: number;
   employeeName: string;
   paymentDate: string;
+  basic_salary: number;
+  housing_allowance: number;
+  transport_allowance: number;
+  utility_allowance: number;
+  lunch_allowance: number;
+  entertainment_allowance: number;
+  leave_allowance: number;
+  other_allowances: number;
+  bonus: number;
+  overtime: number;
+  employee_deductions: number;
+  loan_repayment: number;
   [key: string]: string | number | undefined;
-};
-
-type CalculatedPayroll = {
-  grossSalary: number;
-  deductions: number;
-  netSalary: number;
-  details: Record<string, number>;
 };
 
 export function PayrollCalculator() {
   const { customFields, addCustomField, removeCustomField } = useCustomFields();
-  const [calculatedPayroll, setCalculatedPayroll] = useState<CalculatedPayroll | null>(null);
+  const [calculatedPayroll, setCalculatedPayroll] = useState<NigerianPayrollOutput | null>(null);
   const [importedData, setImportedData] = useState<ExcelPayrollData[]>([]);
   const [activeTab, setActiveTab] = useState<string>('manual');
   const [currentEmployeeIndex, setCurrentEmployeeIndex] = useState<number>(0);
@@ -55,13 +57,20 @@ export function PayrollCalculator() {
   
   const form = useForm<FieldValues>({
     defaultValues: {
-      baseSalary: 0,
-      hoursWorked: 0,
-      hourlyRate: 0,
-      taxRate: 20,
-      bonusAmount: 0,
       employeeName: '',
       paymentDate: formatDate(defaultPaymentDate),
+      basic_salary: 0,
+      housing_allowance: 0,
+      transport_allowance: 0,
+      utility_allowance: 0,
+      lunch_allowance: 0,
+      entertainment_allowance: 0,
+      leave_allowance: 0,
+      other_allowances: 0,
+      bonus: 0,
+      overtime: 0,
+      employee_deductions: 0,
+      loan_repayment: 0,
     },
   });
 
@@ -80,25 +89,32 @@ export function PayrollCalculator() {
     // Reset form first
     form.reset();
     
-    // Set values from Excel data
+    // Set employee name
     form.setValue('employeeName', employeeData.employeeName || '');
-    form.setValue('baseSalary', employeeData.baseSalary || 0);
     
-    if (employeeData.hoursWorked !== undefined) {
-      form.setValue('hoursWorked', Number(employeeData.hoursWorked));
-    }
+    // Map standard fields from Excel to our form fields
+    const fieldMappings = {
+      baseSalary: 'basic_salary',
+      housingAllowance: 'housing_allowance',
+      transportAllowance: 'transport_allowance',
+      utilityAllowance: 'utility_allowance',
+      lunchAllowance: 'lunch_allowance',
+      entertainmentAllowance: 'entertainment_allowance',
+      leaveAllowance: 'leave_allowance',
+      otherAllowances: 'other_allowances',
+      bonusAmount: 'bonus',
+      overtime: 'overtime',
+      employeeDeductions: 'employee_deductions',
+      loanRepayment: 'loan_repayment',
+    };
     
-    if (employeeData.hourlyRate !== undefined) {
-      form.setValue('hourlyRate', Number(employeeData.hourlyRate));
-    }
-    
-    if (employeeData.bonusAmount !== undefined) {
-      form.setValue('bonusAmount', Number(employeeData.bonusAmount));
-    }
-    
-    if (employeeData.taxRate !== undefined) {
-      form.setValue('taxRate', Number(employeeData.taxRate));
-    }
+    // Set values from Excel data using mappings
+    Object.entries(fieldMappings).forEach(([excelField, formField]) => {
+      const value = employeeData[excelField];
+      if (value !== undefined) {
+        form.setValue(formField as keyof FieldValues, Number(value));
+      }
+    });
     
     // Handle custom fields if they exist in the data
     customFields.forEach(field => {
@@ -124,48 +140,40 @@ export function PayrollCalculator() {
   };
 
   const calculatePayroll = (data: FieldValues) => {
-    // Base calculation
-    let grossSalary = Number(data.baseSalary);
+    // Get all form values
+    const payrollInput = {
+      basic_salary: Number(data.basic_salary) || 0,
+      housing_allowance: Number(data.housing_allowance) || 0,
+      transport_allowance: Number(data.transport_allowance) || 0,
+      utility_allowance: Number(data.utility_allowance) || 0,
+      lunch_allowance: Number(data.lunch_allowance) || 0,
+      entertainment_allowance: Number(data.entertainment_allowance) || 0,
+      leave_allowance: Number(data.leave_allowance) || 0,
+      other_allowances: Number(data.other_allowances) || 0,
+      bonus: Number(data.bonus) || 0,
+      overtime: Number(data.overtime) || 0,
+      employee_deductions: Number(data.employee_deductions) || 0,
+      loan_repayment: Number(data.loan_repayment) || 0,
+    };
     
-    // Add hourly calculations if provided
-    if (data.hoursWorked && data.hourlyRate) {
-      grossSalary += Number(data.hoursWorked) * Number(data.hourlyRate);
-    }
-    
-    // Add bonus if provided
-    if (data.bonusAmount) {
-      grossSalary += Number(data.bonusAmount);
-    }
-    
-    // Process custom fields
-    const details: Record<string, number> = {};
-    
+    // Add custom fields if they're numeric
     customFields.forEach(field => {
       const value = data[field.id];
       if (field.type === 'number' && value !== undefined) {
-        grossSalary += Number(value);
-        details[field.name] = Number(value);
+        payrollInput.other_allowances = (payrollInput.other_allowances || 0) + Number(value);
       } else if (field.type === 'percentage' && value !== undefined) {
-        const amount = (grossSalary * Number(value)) / 100;
-        details[field.name] = amount;
-        grossSalary += amount;
+        // For percentage fields, we calculate the amount based on the gross income
+        const percentage = Number(value) / 100;
+        const baseAmount = payrollInput.basic_salary;
+        const amount = baseAmount * percentage;
+        payrollInput.other_allowances = (payrollInput.other_allowances || 0) + amount;
       }
     });
     
-    // Calculate tax
-    const taxRate = Number(data.taxRate) || 0;
-    const deductions = (grossSalary * taxRate) / 100;
-    const netSalary = grossSalary - deductions;
+    // Calculate payroll using Nigerian tax rules
+    const result = calculateNigerianPayroll(payrollInput);
     
-    const calculatedResult = {
-      grossSalary,
-      deductions,
-      netSalary,
-      details
-    };
-    
-    setCalculatedPayroll(calculatedResult);
-    
+    setCalculatedPayroll(result);
     toast.success("Payroll calculated successfully!");
   };
 
@@ -216,22 +224,22 @@ export function PayrollCalculator() {
       // Create current date for start_date and end_date
       const currentDate = formatDate(new Date());
       
-      // Create payroll period with explicit status type
+      // Create payroll period
       const period = {
-        start_date: currentDate, // Use current date as start date
-        end_date: currentDate,   // Use current date as end date
+        start_date: currentDate,
+        end_date: currentDate,
         payment_date: values.paymentDate,
-        status: 'draft' as 'draft' | 'processing' | 'paid' | 'cancelled', // Fixed status type
-        total_amount: calculatedPayroll.grossSalary
+        status: 'draft' as 'draft' | 'processing' | 'paid' | 'cancelled',
+        total_amount: calculatedPayroll.gross_income
       };
       
       // Create payroll entry
       const entry = {
         employee_name: values.employeeName,
-        base_salary: Number(values.baseSalary),
-        taxes: calculatedPayroll.deductions,
-        net_pay: calculatedPayroll.netSalary,
-        additional_details: calculatedPayroll.details
+        base_salary: Number(values.basic_salary),
+        taxes: calculatedPayroll.monthly_paye,
+        net_pay: calculatedPayroll.net_pay,
+        additional_details: calculatedPayroll.details || {}
       };
       
       await savePayroll(period, [entry]);
@@ -263,15 +271,22 @@ export function PayrollCalculator() {
     // Process each employee in the imported data
     importedData.forEach((employee, index) => {
       try {
-        // Prepare data for calculation
+        // Map employee data to our new field structure
         const calculationData: FieldValues = {
-          baseSalary: employee.baseSalary || 0,
-          hoursWorked: employee.hoursWorked !== undefined ? Number(employee.hoursWorked) : 0,
-          hourlyRate: employee.hourlyRate !== undefined ? Number(employee.hourlyRate) : 0,
-          taxRate: employee.taxRate !== undefined ? Number(employee.taxRate) : 20, // Default tax rate
-          bonusAmount: employee.bonusAmount !== undefined ? Number(employee.bonusAmount) : 0,
           employeeName: employee.employeeName || `Employee ${index + 1}`,
           paymentDate: form.getValues().paymentDate,
+          basic_salary: employee.baseSalary || 0,
+          housing_allowance: Number(employee.housingAllowance) || 0,
+          transport_allowance: Number(employee.transportAllowance) || 0,
+          utility_allowance: Number(employee.utilityAllowance) || 0,
+          lunch_allowance: Number(employee.lunchAllowance) || 0,
+          entertainment_allowance: Number(employee.entertainmentAllowance) || 0,
+          leave_allowance: Number(employee.leaveAllowance) || 0,
+          other_allowances: Number(employee.otherAllowances) || 0,
+          bonus: Number(employee.bonusAmount) || 0,
+          overtime: Number(employee.overtime) || 0,
+          employee_deductions: Number(employee.employeeDeductions) || 0,
+          loan_repayment: Number(employee.loanRepayment) || 0,
         };
         
         // Add any custom fields from the data
@@ -291,6 +306,15 @@ export function PayrollCalculator() {
     });
     
     toast.success(`Successfully calculated payroll for ${successCount} out of ${importedData.length} employees`);
+  };
+
+  // Update excel template to match our new fields
+  const generateUpdatedExcelTemplate = () => {
+    const downloadTemplateLink = document.createElement('a');
+    downloadTemplateLink.href = '/nigeria_payroll_template.xlsx';
+    downloadTemplateLink.download = 'nigeria_payroll_template.xlsx';
+    downloadTemplateLink.click();
+    toast.success('Template downloaded successfully');
   };
 
   return (
@@ -374,8 +398,8 @@ export function PayrollCalculator() {
       
       <Card className="border border-gray-200 shadow-sm">
         <CardHeader>
-          <CardTitle className="text-xl font-semibold text-gray-800">Payroll Calculator</CardTitle>
-          <CardDescription>Calculate employee payroll with customizable fields</CardDescription>
+          <CardTitle className="text-xl font-semibold text-gray-800">Nigerian Payroll Calculator</CardTitle>
+          <CardDescription>Calculate employee payroll with PAYE, Pension and NHIS deductions</CardDescription>
         </CardHeader>
         <CardContent>
           <Tabs value={activeTab} onValueChange={setActiveTab}>
@@ -407,10 +431,10 @@ export function PayrollCalculator() {
                     
                     <FormField
                       control={form.control}
-                      name="baseSalary"
+                      name="basic_salary"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Base Salary</FormLabel>
+                          <FormLabel>Basic Salary</FormLabel>
                           <FormControl>
                             <Input 
                               type="number" 
@@ -419,7 +443,7 @@ export function PayrollCalculator() {
                               onChange={(e) => field.onChange(e.target.valueAsNumber)}
                             />
                           </FormControl>
-                          <FormDescription>Monthly base salary</FormDescription>
+                          <FormDescription>Monthly basic salary</FormDescription>
                           <FormMessage />
                         </FormItem>
                       )}
@@ -427,50 +451,10 @@ export function PayrollCalculator() {
                     
                     <FormField
                       control={form.control}
-                      name="taxRate"
+                      name="housing_allowance"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Tax Rate (%)</FormLabel>
-                          <FormControl>
-                            <Input 
-                              type="number" 
-                              placeholder="20" 
-                              {...field} 
-                              onChange={(e) => field.onChange(e.target.valueAsNumber)}
-                            />
-                          </FormControl>
-                          <FormDescription>Percentage of tax to deduct</FormDescription>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    
-                    <FormField
-                      control={form.control}
-                      name="hoursWorked"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Hours Worked (optional)</FormLabel>
-                          <FormControl>
-                            <Input 
-                              type="number" 
-                              placeholder="0" 
-                              {...field} 
-                              onChange={(e) => field.onChange(e.target.valueAsNumber)}
-                            />
-                          </FormControl>
-                          <FormDescription>For hourly employees</FormDescription>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    
-                    <FormField
-                      control={form.control}
-                      name="hourlyRate"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Hourly Rate (optional)</FormLabel>
+                          <FormLabel>Housing Allowance</FormLabel>
                           <FormControl>
                             <Input 
                               type="number" 
@@ -486,10 +470,181 @@ export function PayrollCalculator() {
                     
                     <FormField
                       control={form.control}
-                      name="bonusAmount"
+                      name="transport_allowance"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Bonus Amount (optional)</FormLabel>
+                          <FormLabel>Transport Allowance</FormLabel>
+                          <FormControl>
+                            <Input 
+                              type="number" 
+                              placeholder="0.00" 
+                              {...field} 
+                              onChange={(e) => field.onChange(e.target.valueAsNumber)}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    
+                    <FormField
+                      control={form.control}
+                      name="utility_allowance"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Utility Allowance</FormLabel>
+                          <FormControl>
+                            <Input 
+                              type="number" 
+                              placeholder="0.00" 
+                              {...field} 
+                              onChange={(e) => field.onChange(e.target.valueAsNumber)}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    
+                    <FormField
+                      control={form.control}
+                      name="lunch_allowance"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Lunch Allowance</FormLabel>
+                          <FormControl>
+                            <Input 
+                              type="number" 
+                              placeholder="0.00" 
+                              {...field} 
+                              onChange={(e) => field.onChange(e.target.valueAsNumber)}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    
+                    <FormField
+                      control={form.control}
+                      name="entertainment_allowance"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Entertainment Allowance</FormLabel>
+                          <FormControl>
+                            <Input 
+                              type="number" 
+                              placeholder="0.00" 
+                              {...field} 
+                              onChange={(e) => field.onChange(e.target.valueAsNumber)}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    
+                    <FormField
+                      control={form.control}
+                      name="leave_allowance"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Leave Allowance</FormLabel>
+                          <FormControl>
+                            <Input 
+                              type="number" 
+                              placeholder="0.00" 
+                              {...field} 
+                              onChange={(e) => field.onChange(e.target.valueAsNumber)}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    
+                    <FormField
+                      control={form.control}
+                      name="other_allowances"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Other Allowances</FormLabel>
+                          <FormControl>
+                            <Input 
+                              type="number" 
+                              placeholder="0.00" 
+                              {...field} 
+                              onChange={(e) => field.onChange(e.target.valueAsNumber)}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    
+                    <FormField
+                      control={form.control}
+                      name="bonus"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Bonus</FormLabel>
+                          <FormControl>
+                            <Input 
+                              type="number" 
+                              placeholder="0.00" 
+                              {...field} 
+                              onChange={(e) => field.onChange(e.target.valueAsNumber)}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    
+                    <FormField
+                      control={form.control}
+                      name="overtime"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Overtime</FormLabel>
+                          <FormControl>
+                            <Input 
+                              type="number" 
+                              placeholder="0.00" 
+                              {...field} 
+                              onChange={(e) => field.onChange(e.target.valueAsNumber)}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    
+                    <FormField
+                      control={form.control}
+                      name="employee_deductions"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Employee Deductions</FormLabel>
+                          <FormControl>
+                            <Input 
+                              type="number" 
+                              placeholder="0.00" 
+                              {...field} 
+                              onChange={(e) => field.onChange(e.target.valueAsNumber)}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    
+                    <FormField
+                      control={form.control}
+                      name="loan_repayment"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Loan Repayment</FormLabel>
                           <FormControl>
                             <Input 
                               type="number" 
@@ -552,14 +707,24 @@ export function PayrollCalculator() {
                     </>
                   )}
                   
-                  <Button type="submit" className="w-full">Calculate Payroll</Button>
+                  <Button type="submit" className="w-full">Calculate Nigerian Payroll</Button>
                 </form>
               </Form>
             </TabsContent>
             
             <TabsContent value="excel">
               <div className="space-y-6">
-                <ExcelUploader onDataImported={handleExcelDataImported} />
+                <div className="flex flex-col md:flex-row gap-4 items-center">
+                  <ExcelUploader onDataImported={handleExcelDataImported} />
+                  <Button 
+                    variant="outline" 
+                    onClick={generateUpdatedExcelTemplate}
+                    className="w-full md:w-auto"
+                  >
+                    <Download className="mr-2 h-4 w-4" />
+                    Download Nigerian Template
+                  </Button>
+                </div>
                 
                 {importedData.length > 0 && (
                   <div className="space-y-4">
@@ -588,7 +753,7 @@ export function PayrollCalculator() {
                     <div className="p-4 border rounded-md">
                       <h4 className="text-sm font-semibold mb-2">Current Employee: {form.getValues().employeeName}</h4>
                       <p className="text-sm text-gray-600">
-                        Base Salary: {formatCurrency(form.getValues().baseSalary || 0)}
+                        Basic Salary: {formatCurrency(form.getValues().basic_salary || 0)}
                       </p>
                     </div>
                     
@@ -619,33 +784,60 @@ export function PayrollCalculator() {
       {calculatedPayroll && (
         <Card className="border border-gray-200 shadow-sm">
           <CardHeader>
-            <CardTitle className="text-xl font-semibold text-gray-800">Payroll Result</CardTitle>
+            <CardTitle className="text-xl font-semibold text-gray-800">Nigerian Payroll Result</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div className="bg-gray-50 p-4 rounded-md">
-                  <div className="text-sm text-gray-500">Gross Salary</div>
-                  <div className="text-2xl font-bold text-gray-900">{formatCurrency(calculatedPayroll.grossSalary)}</div>
+                  <div className="text-sm text-gray-500">Gross Income</div>
+                  <div className="text-2xl font-bold text-gray-900">{formatCurrency(calculatedPayroll.gross_income)}</div>
+                </div>
+                <div className="bg-gray-50 p-4 rounded-md">
+                  <div className="text-sm text-gray-500">Total Deductions</div>
+                  <div className="text-2xl font-bold text-red-600">
+                    {formatCurrency(
+                      calculatedPayroll.employee_pension + 
+                      calculatedPayroll.nhis + 
+                      calculatedPayroll.monthly_paye
+                    )}
+                  </div>
                 </div>
                 <div className="bg-gray-50 p-4 rounded-md">
                   <div className="text-sm text-gray-500">Net Salary</div>
-                  <div className="text-2xl font-bold text-payroll-700">{formatCurrency(calculatedPayroll.netSalary)}</div>
+                  <div className="text-2xl font-bold text-payroll-700">{formatCurrency(calculatedPayroll.net_pay)}</div>
                 </div>
               </div>
               
-              <div className="bg-gray-50 p-4 rounded-md">
-                <div className="text-sm text-gray-500">Tax Deductions</div>
-                <div className="text-xl font-semibold text-red-600">{formatCurrency(calculatedPayroll.deductions)}</div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="bg-gray-50 p-4 rounded-md">
+                  <div className="text-sm text-gray-500">Employee Pension (8%)</div>
+                  <div className="text-xl font-semibold text-red-600">{formatCurrency(calculatedPayroll.employee_pension)}</div>
+                </div>
+                <div className="bg-gray-50 p-4 rounded-md">
+                  <div className="text-sm text-gray-500">Employer Pension (10%)</div>
+                  <div className="text-xl font-semibold text-blue-600">{formatCurrency(calculatedPayroll.employer_pension)}</div>
+                </div>
               </div>
               
-              {Object.keys(calculatedPayroll.details).length > 0 && (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="bg-gray-50 p-4 rounded-md">
+                  <div className="text-sm text-gray-500">NHIS (5%)</div>
+                  <div className="text-xl font-semibold text-red-600">{formatCurrency(calculatedPayroll.nhis)}</div>
+                </div>
+                <div className="bg-gray-50 p-4 rounded-md">
+                  <div className="text-sm text-gray-500">Monthly PAYE Tax</div>
+                  <div className="text-xl font-semibold text-red-600">{formatCurrency(calculatedPayroll.monthly_paye)}</div>
+                </div>
+              </div>
+              
+              {calculatedPayroll.details && Object.keys(calculatedPayroll.details).length > 0 && (
                 <div>
-                  <h3 className="text-sm font-medium mb-2">Custom Field Details</h3>
-                  <div className="space-y-2">
+                  <h3 className="text-sm font-medium mb-2">Payroll Breakdown</h3>
+                  <div className="space-y-2 max-h-60 overflow-y-auto p-2 border rounded-md">
                     {Object.entries(calculatedPayroll.details).map(([name, value]) => (
                       <div key={name} className="flex justify-between bg-gray-50 p-2 rounded-md">
-                        <span>{name}</span>
+                        <span className="capitalize">{name.replace(/_/g, ' ')}</span>
                         <span className="font-medium">{formatCurrency(value)}</span>
                       </div>
                     ))}

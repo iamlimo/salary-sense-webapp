@@ -3,11 +3,18 @@ import * as XLSX from 'xlsx';
 
 export type ExcelPayrollData = {
   employeeName: string;
-  baseSalary: number;
-  hoursWorked?: number;
-  hourlyRate?: number;
-  bonusAmount?: number;
-  taxRate?: number;
+  baseSalary: number; // Will map to basic_salary
+  housingAllowance?: number;
+  transportAllowance?: number;
+  utilityAllowance?: number;
+  lunchAllowance?: number;
+  entertainmentAllowance?: number;
+  leaveAllowance?: number;
+  otherAllowances?: number;
+  bonusAmount?: number; // Will map to bonus
+  overtime?: number;
+  employeeDeductions?: number;
+  loanRepayment?: number;
   [key: string]: string | number | undefined;
 };
 
@@ -29,11 +36,18 @@ export const parsePayrollExcel = (file: File): Promise<ExcelPayrollData[]> => {
         const payrollData: ExcelPayrollData[] = jsonData.map((row: any) => {
           return {
             employeeName: row['Employee Name'] || row['EmployeeName'] || row['Name'] || '',
-            baseSalary: Number(row['Base Salary'] || row['BaseSalary'] || row['Salary'] || 0),
-            hoursWorked: row['Hours Worked'] || row['HoursWorked'] || undefined,
-            hourlyRate: row['Hourly Rate'] || row['HourlyRate'] || undefined,
-            bonusAmount: row['Bonus'] || row['BonusAmount'] || undefined,
-            taxRate: row['Tax Rate'] || row['TaxRate'] || undefined,
+            baseSalary: Number(row['Basic Salary'] || row['BasicSalary'] || row['Base Salary'] || row['BaseSalary'] || 0),
+            housingAllowance: Number(row['Housing Allowance'] || row['HousingAllowance'] || 0),
+            transportAllowance: Number(row['Transport Allowance'] || row['TransportAllowance'] || 0),
+            utilityAllowance: Number(row['Utility Allowance'] || row['UtilityAllowance'] || 0),
+            lunchAllowance: Number(row['Lunch Allowance'] || row['LunchAllowance'] || 0),
+            entertainmentAllowance: Number(row['Entertainment Allowance'] || row['EntertainmentAllowance'] || 0),
+            leaveAllowance: Number(row['Leave Allowance'] || row['LeaveAllowance'] || 0),
+            otherAllowances: Number(row['Other Allowances'] || row['OtherAllowances'] || 0),
+            bonusAmount: Number(row['Bonus'] || row['BonusAmount'] || 0),
+            overtime: Number(row['Overtime'] || 0),
+            employeeDeductions: Number(row['Employee Deductions'] || row['EmployeeDeductions'] || 0),
+            loanRepayment: Number(row['Loan Repayment'] || row['LoanRepayment'] || 0),
             // Additional fields might be present and will be handled by the [key: string] type
             ...row
           };
@@ -55,25 +69,39 @@ export const generateExcelTemplate = (): void => {
   const data = [
     {
       'Employee Name': 'John Doe',
-      'Base Salary': 50000,
-      'Hours Worked': 40,
-      'Hourly Rate': 0,
-      'Bonus Amount': 1000,
-      'Tax Rate': 20
+      'Basic Salary': 50000,
+      'Housing Allowance': 10000,
+      'Transport Allowance': 5000,
+      'Utility Allowance': 2000,
+      'Lunch Allowance': 1000,
+      'Entertainment Allowance': 1000,
+      'Leave Allowance': 0,
+      'Other Allowances': 0,
+      'Bonus': 1000,
+      'Overtime': 0,
+      'Employee Deductions': 0,
+      'Loan Repayment': 0
     },
     {
       'Employee Name': 'Jane Smith',
-      'Base Salary': 60000,
-      'Hours Worked': 0,
-      'Hourly Rate': 0,
-      'Bonus Amount': 500,
-      'Tax Rate': 20
+      'Basic Salary': 60000,
+      'Housing Allowance': 12000,
+      'Transport Allowance': 6000,
+      'Utility Allowance': 2400,
+      'Lunch Allowance': 1200,
+      'Entertainment Allowance': 1200,
+      'Leave Allowance': 0,
+      'Other Allowances': 0,
+      'Bonus': 500,
+      'Overtime': 0,
+      'Employee Deductions': 0,
+      'Loan Repayment': 0
     }
   ];
   
   const worksheet = XLSX.utils.json_to_sheet(data);
   const workbook = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(workbook, worksheet, 'Payroll Template');
+  XLSX.utils.book_append_sheet(workbook, worksheet, 'Nigerian Payroll Template');
   
-  XLSX.writeFile(workbook, 'payroll_template.xlsx');
+  XLSX.writeFile(workbook, 'nigeria_payroll_template.xlsx');
 };
