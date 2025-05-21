@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { PlusCircle, Trash2, Save, Calculator, Download } from 'lucide-react';
@@ -93,7 +92,7 @@ export function PayrollCalculator() {
     form.setValue('employeeName', employeeData.employeeName || '');
     
     // Map standard fields from Excel to our form fields
-    const fieldMappings = {
+    const fieldMappings: Record<keyof ExcelPayrollData, keyof FieldValues> = {
       baseSalary: 'basic_salary',
       housingAllowance: 'housing_allowance',
       transportAllowance: 'transport_allowance',
@@ -106,13 +105,14 @@ export function PayrollCalculator() {
       overtime: 'overtime',
       employeeDeductions: 'employee_deductions',
       loanRepayment: 'loan_repayment',
-    };
+      employeeName: 'employeeName'
+    } as const;
     
     // Set values from Excel data using mappings
     Object.entries(fieldMappings).forEach(([excelField, formField]) => {
-      const value = employeeData[excelField];
+      const value = employeeData[excelField as keyof ExcelPayrollData];
       if (value !== undefined) {
-        form.setValue(formField as keyof FieldValues, Number(value));
+        form.setValue(formField, Number(value));
       }
     });
     
