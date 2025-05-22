@@ -80,7 +80,7 @@ export function PayrollCalculator() {
     // Reset form first
     form.reset();
     
-    // Set values from Excel data
+    // Set values from Excel data using proper string keys
     form.setValue('employeeName', employeeData.employeeName || '');
     form.setValue('baseSalary', employeeData.baseSalary || 0);
     
@@ -104,7 +104,8 @@ export function PayrollCalculator() {
     customFields.forEach(field => {
       const fieldValue = employeeData[field.name];
       if (fieldValue !== undefined) {
-        form.setValue(field.id, field.type === 'number' ? Number(fieldValue) : fieldValue);
+        // Use string indexing for form values
+        form.setValue(field.id as string, field.type === 'number' ? Number(fieldValue) : fieldValue);
       }
     });
   };
